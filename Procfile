@@ -7,5 +7,5 @@
 \pard\pardeftab720\partightenfactor0
 
 \f0\fs28 \cf2 \cb3 \expnd0\expndtw0\kerning0
-\outl0\strokewidth0 \strokec2 web: gunicorn gettingstarted.wsgi\
+web: gunicorn app.py\
 }
