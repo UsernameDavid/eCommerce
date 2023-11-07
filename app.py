@@ -9,172 +9,137 @@ CORS(app)
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "app.sqlite")
-
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
 
-class Movie(db.Model):
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    title = db.Column(db.String, nullable=False, unique=True)
-    genre = db.Column(db.String, nullable=False)
-    mpaa_rating = db.Column(db.String)
-    poster_img = db.Column(db.String, unique=True)
-    all_reviews = db.relationship('Review', backref='movie', cascade='all,delete,delete-orphan', lazy=True)
+class Product(db.Model):
+        id = db.Column(db.Integer, primary_key=True, nullable=False)
+        name = db.Column(db.String, nullable=False, unique=True)
+        description = db.Column(db.String, nullable=False)
+        price = db.Column(db.String, nullable=False)
+        category = db.Column(db.String, nullable=False)
+        image = db.Column(db.String, unique=True)
+        
+        def __init__(self, name, description, price, category, image):
+            self.name = name
+            self.description = description
+            self.price = price
+            self.category = category
+            self.image = image
 
-    def __init__(self, title, genre, mpaa_rating, poster_img):
-        self.title = title
-        self.genre = genre
-        self.mpaa_rating = mpaa_rating
-        self.poster_img = poster_img
+class ProductSchema(ma.Schema):
+        class Meta:
+            fields = ('id', 'name', 'description', 'price', 'category', 'image')
 
-class Review(db.Model):
-    id = db.Column(db.Integer, primary_key=True, nullable=False)
-    star_rating = db.Column(db.Float, nullable=False)
-    review_text = db.Column(db.Text(300))
-    movie_id = db.Column(db.Integer, db.ForeignKey('movie.id'), nullable=False)
+product_schema = ProductSchema()
+multi_product_schema = ProductSchema(many=True)
 
-    def __init__(self, star_rating, review_text, movie_id):
-        self.star_rating = star_rating
-        self.review_text = review_text
-        self.movie_id = movie_id
-
-class ReviewSchema(ma.Schema):
-    class Meta:
-        fields = ('id', 'star_rating', 'review_text', 'movie_id')
-
-review_schema = ReviewSchema()
-multi_review_schema = ReviewSchema(many=True)
-
-class MovieSchema(ma.Schema):
-    all_reviews = ma.Nested(multi_review_schema)
-    class Meta:
-        fields = ('id', 'title', 'genre', 'mpaa_rating', 'poster_img', 'all_reviews')
-
-movie_schema = MovieSchema()
-multi_movie_schema = MovieSchema(many=True)
-
-# **** Add Movie EndPoint ****
-@app.route('/movie/add', methods=["POST"])
-def add_movie():
+# **** Add Product EndPoint ****
+@app.route('/product/add', methods=["POST"])
+def add_product():
     if request.content_type != 'application/json':
         return jsonify('Error: Data must be sent as JSON')
     
     post_data = request.get_json()
-    title = post_data.get('title')
-    genre = post_data.get('genre')
-    mpaa_rating = post_data.get('mpaa_rating')
-    poster_img = post_data.get('poster_img')
+    name = post_data.get('name')
+    description = post_data.get('description')
+    price = post_data.get('price')
+    category = post_data.get('category')
+    image = post_data.get('image')
 
-    if title == None:
-        return jsonify("Error: You must provide a movie title!")
-    if genre == None:
-        return jsonify("Error: You must provide a movie genre!")
+    if name == None:
+        return jsonify("Error: Please, provide a product name.")
+    if description == None:
+        return jsonify("Error: Please, provide a description.")
+    if price == None:
+        return jsonify("Error: Please, provide the price.")
+    if category == None:
+        return jsonify("Error: Please, provide a category.")
     
-    new_record = Movie(title, genre, mpaa_rating,poster_img)
+    new_record = Product(name, description, price, category, image)
     db.session.add(new_record)
     db.session.commit()
 
-    return jsonify(movie_schema.dump(new_record))
+    return jsonify(product_schema.dump(new_record))
 
-# **** Get Movie EndPoint ****
-@app.route('/movie/get', methods=["GET"])
-def get_movies():
-    all_movies = db.session.query(Movie).all()
-    return jsonify(multi_movie_schema.dump(all_movies))
+# **** Get Product EndPoint ****
+@app.route('/product/get', methods=["GET"])
+def get_products():
+    all_products = db.session.query(Product).all()
+    return jsonify(multi_product_schema.dump(all_products))
 
-# **** Get A Movie EndPoint ****
-@app.route('/movie/get/<id>', methods=["GET"])
-def get_movie(id):
-    get_movie = db.session.query(Movie).filter(Movie.id == id).first()
-    return jsonify(movie_schema.dump(get_movie))
+# **** Get A Product EndPoint ****
+@app.route('/product/get/<id>', methods=["GET"])
+def get_product(id):
+    get_product = db.session.query(Product).filter(Product.id == id).first()
+    return jsonify(product_schema.dump(get_product))
 
-# **** Edit Movie EndPoint ****
-@app.route('/movie/edit/<id>', methods=["PUT"])
-def edit_movie_id(id):
+# **** Edit Product EndPoint ****
+@app.route('/product/edit/<id>', methods=["PUT"])
+def edit_product_id(id):
     if request.content_type != 'application/json':
-        return jsonify("Error: Data must be sent as JSON!")
+        return jsonify("Error: Data must be sent as JSON")
     
     put_data = request.get_json()
-    title = put_data.get('title')
-    genre = put_data.get('genre')
-    mpaa_rating = put_data.get('mpaa_rating')
-    poster_img = put_data.get('poster_img')
+    name = put_data.get('name')
+    description = put_data.get('description')
+    price = put_data.get('price')
+    category = put_data.get('category')
+    image = put_data.get('image')
 
-    edit_movie_id = db.session.query(Movie).filter(Movie.id == id).first()
+    edit_product_id = db.session.query(Product).filter(Product.id == id).first()
 
-    if title != None:
-        edit_movie_id.title = title
-    if genre != None:
-        edit_movie_id.genre = genre
-    if mpaa_rating != None:
-        edit_movie_id.mpaa_rating = mpaa_rating
-    if poster_img != None:
-        edit_movie_id.poster_img = poster_img
+    if name != None:
+        edit_product_id.name = name
+    if description != None:
+        edit_product_id.description = description
+    if price != None:
+        edit_product_id.price = price
+    if category != None:
+        edit_product_id.category = category
+    if image != None:
+        edit_product_id.image = image
 
     db.session.commit()
-    return jsonify(movie_schema.dump(edit_movie_id))
+    return jsonify(product_schema.dump(edit_product_id))
 
 
-# **** Delete Movie EndPoint ****
+# **** Delete Product EndPoint ****
 
-@app.route('/movie/delete/<id>', methods=["DELETE"])
-def delete_movie_id(id):
-    delete_movie = db.session.query(Movie).filter(Movie.id == id).first()
-    db.session.delete(delete_movie)
+@app.route('/product/delete/<id>', methods=["DELETE"])
+def delete_product_id(id):
+    delete_product = db.session.query(Product).filter(Product.id == id).first()
+    db.session.delete(delete_product)
     db.session.commit()
-    return jsonify("Your movie has been deleted!", movie_schema.dump(delete_movie))
+    return jsonify("The product has been deleted!", product_schema.dump(delete_product))
 
 
-#  **** Add Many Movies EndPoint ****
-@app.route('/movie/add/many', methods=["POST"])
-def add_many_movies():
+#  **** Add Many Products EndPoint ****
+@app.route('/product/add/many', methods=["POST"])
+def add_many_products():
     if request.content_type != "application/json":
         return jsonify("Error: Your Data must be sent as JSON")
     
     post_data = request.get_json()
-    movies = post_data.get('movies')
+    products = post_data.get('products')
 
-    new_movies = []
+    new_products = []
 
-    for movie in movies:
-        title = movie.get('title')
-        genre = movie.get('genre')
-        mpaa_rating = movie.get('mpaa_rating')
-        poster_img = movie.get('poster_img')
+    for product in products:
+        name = product.get('name')
+        description = product.get('description')
+        price = product.get('price')
+        category = product.get('category')
+        image = product.get('image')
 
-        existing_movie_check = db.session.query(Movie).filter(Movie.title == title).first()
-        if existing_movie_check is None:
-            new_record = Movie(title, genre, mpaa_rating,poster_img)
+        existing_product_check = db.session.query(Product).filter(Product.name == name).first()
+        if existing_product_check is None:
+            new_record = Product(name, description, price, category, image)
             db.session.add(new_record)
             db.session.commit()
-            new_movies.append(movie_schema.dump(new_record))
+            new_products.append(product_schema.dump(new_record))
 
-    return jsonify(multi_movie_schema.dump(new_movies))
-
-# **** Add Review EndPoint ****
-@app.route('/review/add', methods=["POST"])
-def add_review():
-    if request.content_type != 'application/json':
-        return jsonify("Error: Data must be submitted as JSON!")
-    
-    post_data = request.get_json()
-    star_rating = post_data.get('star_rating')
-    review_text = post_data.get('review_text')
-    movie_id = post_data.get('movie_id')
-
-    if star_rating == None:
-        return jsonify("Error: You must enter a Star Rating for your Review")
-    if movie_id == None:
-        return jsonify("Error: That Movie entry does not exist!")
-    
-    new_review = Review(star_rating, review_text, movie_id)
-    db.session.add(new_review)
-    db.session.commit()
-
-    return jsonify(review_schema.dump(new_review))
-
-
-
+    return jsonify(multi_product_schema.dump(new_products))
 
 if __name__ == "__main__":
     app.run(debug = True)
