@@ -34,6 +34,10 @@ class ProductSchema(ma.Schema):
 product_schema = ProductSchema()
 multi_product_schema = ProductSchema(many=True)
 
+@app.route('/')
+def hello_world():
+    return 'David s Devcamp Backend!'
+
 # **** Add Product EndPoint ****
 @app.route('/product/add', methods=["POST"])
 def add_product():
